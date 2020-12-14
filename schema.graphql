@@ -34,33 +34,17 @@ enum RequestType {
   Removal
 }
 
-type MetaEvidence @entity {
-  "The number of meta evidence events emitted."
-  id: ID!
-  "Registration meta evidences."
-  registrationMetaEvidenceURI: String!
-  "Removal meta evidences."
-  clearingMetaEvidenceURI: String!
-}
-
-type ArbitrationData @entity {
-  "The number of times arbitration data has been set."
-  id: ID!
-  "The address of the arbitrator."
-  arbitrator: Bytes!
-  "The extra data passed to the arbitrator."
-  arbitratorExtraData: Bytes!
-}
-
 type Registry @entity {
   "The registry address"
   id: ID!
-  "The meta evidences used for disputes. The last item is the one that will be used for the next request."
-  metaEvidences: [MetaEvidence!]!
-  "The arbitrators and extra datas used for disputes. The last item is the one that will be used for the next request."
-  arbitrationDatas: [ArbitrationData!]!
+  "URI to the registration meta evidence file."
+  registrationMetaEvidenceURI: String!
+  "URI to the removal meta evidence file."
+  clearingMetaEvidenceURI: String!
   "The tokens submitted to this list"
   tokens: [Token!]! @derivedFrom(field: "registry")
+  "The total number of tokens ever submitted"
+  numberOfSubmissions: Int!
 }
 
 type Request @entity {
@@ -74,16 +58,18 @@ type Request @entity {
   type: RequestType!
   "The address that placed the request."
   requester: Bytes!
-  "The time the request was resolved."
+  "The time the request was resolved or 0 if it is not resolved."
   resolutionTime: BigInt!
-  "The arbitrator and extra data used for this request."
-  arbitrationDatas: ArbitrationData!
+  "The address of the arbitrator used for this request."
+  arbitrator: Bytes!
+  "The extra data used for this request."
+  arbitratorExtraData: Bytes!
   "The URI to the meta evidence file used for this request."
   metaEvidenceURI: String!
   "True if a dispute was raised."
   disputed: Boolean!
   "ID of the dispute, if any."
-  disputeID: Int!
+  disputeID: BigInt!
   "The address of the party that challenged the request"
   challenger: Bytes!
   "The outcome of the dispute, if any. Note that unsuccessful appeal fundings can invert the arbitrator ruling (so this may differ from the ruling given by the arbitrator)."
@@ -93,7 +79,7 @@ type Request @entity {
   "The ID of the evidence group for this request."
   evidenceGroupID: BigInt!
   "The total number of rounds on this request."
-  numberOfRounds: Int!
+  numberOfRounds: BigInt!
   "The token this request belongs to."
   token: Token!
   "The evidences submitted for this request."
@@ -131,12 +117,22 @@ type Round @entity {
 }
 
 type Token @entity {
+  "The ID of the token."
   id: ID!
+  "The number of requests submitted for this token."
   numberOfRequests: BigInt!
+  "The token name (e.g. Pinakion)."
   name: String!
+  "The token ticker (e.g. PNK)."
   ticker: String!
+  "The address of the token contract."
   address: Bytes!
+  "The multihash of the token image."
   symbolMultihash:String!
+  "The current status of the token."
+  status: Status!
+  "The requests submitted for the token."
   requests: [Request!]! @derivedFrom(field: "token")
+  "The registry this token was submitted to."
   registry: Registry!
 }
