@@ -70,6 +70,8 @@ type Request @entity {
   disputed: Boolean!
   "ID of the dispute, if any."
   disputeID: BigInt!
+  "The time the dispute was created."
+  disputeCreationTime: BigInt!
   "The address of the party that challenged the request"
   challenger: Bytes!
   "The outcome of the dispute, if any. Note that unsuccessful appeal fundings can invert the arbitrator ruling (so this may differ from the ruling given by the arbitrator)."

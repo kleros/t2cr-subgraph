@@ -164,11 +164,22 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
     round.feeRewards = round.feeRewards.plus(
       arbitrationCost.times(tcr.sharedStakeMultiplier()).div(tcr.MULTIPLIER_DIVISOR())
     )
+    request.disputed = true
 
+    let requestInfo = tcr.getRequestInfo(
+      event.params._tokenID,
+      token.numberOfRequests.minus(BigInt.fromI32(1))
+    )
+    request.disputeID = requestInfo.value1;
+    request.disputeCreationTime = event.block.timestamp;
   } else {
     // Dispute appealed.
-    let appealCost = arbitrator.appealCost(request.disputeID, request.arbitratorExtraData);
-    round.feeRewards = round.feeRewards.minus(appealCost)
+    let roundInfo = tcr.getRoundInfo(
+      event.params._tokenID,
+      token.numberOfRequests.minus(BigInt.fromI32(1)),
+      request.numberOfRounds.minus(BigInt.fromI32(2))
+    )
+    round.feeRewards = roundInfo.value3
   }
 
   request.save()
