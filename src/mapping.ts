@@ -157,21 +157,21 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
 
   if (!event.params._appealed) {
     // Request was challenged (i.e. dispute created).
-    let arbitrationCost = arbitrator.arbitrationCost(request.arbitratorExtraData);
-    round.amountPaidChallenger = arbitrationCost.plus(
-      arbitrationCost.times(tcr.sharedStakeMultiplier()).div(tcr.MULTIPLIER_DIVISOR())
-    );
-    round.feeRewards = round.feeRewards.plus(
-      arbitrationCost.times(tcr.sharedStakeMultiplier()).div(tcr.MULTIPLIER_DIVISOR())
-    )
-    request.disputed = true
+  let arbitrationCost = arbitrator.arbitrationCost(request.arbitratorExtraData);
+  round.amountPaidChallenger = arbitrationCost.plus(
+    arbitrationCost.times(tcr.sharedStakeMultiplier()).div(tcr.MULTIPLIER_DIVISOR())
+  );
+  round.feeRewards = round.feeRewards.plus(
+    arbitrationCost.times(tcr.sharedStakeMultiplier()).div(tcr.MULTIPLIER_DIVISOR())
+  )
+  request.disputed = true
 
-    let requestInfo = tcr.getRequestInfo(
-      event.params._tokenID,
-      token.numberOfRequests.minus(BigInt.fromI32(1))
-    )
-    request.disputeID = requestInfo.value1;
-    request.disputeCreationTime = event.block.timestamp;
+  let requestInfo = tcr.getRequestInfo(
+    event.params._tokenID,
+    token.numberOfRequests.minus(BigInt.fromI32(1))
+  )
+  request.disputeID = requestInfo.value1;
+  request.disputeCreationTime = event.block.timestamp;
   } else {
     // Dispute appealed.
     let roundInfo = tcr.getRoundInfo(
@@ -220,7 +220,55 @@ export function handleRuling(event: Ruling): void {
 }
 
 export function handleFundAppeal(call: FundAppealCall): void {
+  // This handler essentially copies the state from the round
+  // that just received the appeal fee contribution to the entity
+  // corresponding entity in the subgraph.
+  // It also creates a new round entity if this call raised an appeal.
+  //
+  // First we must learn if the contribution that triggered this
+  // handler raised an appeal.
+  // - If it raised an appeal, we copy the data from the penultimate
+  //   round.
+  // - If it did not raise an appeal, we copy the data from the
+  //   latest round.
+  let tcr = ArbitrableTokenList.bind(call.to);
+  let token = Token.load(call.inputs._tokenID.toHexString())
+  let request = Request.load(`${token.id}-${token.numberOfRequests.minus(BigInt.fromI32(1))}`)
 
+  let lastRound = tcr.getRoundInfo(
+    call.inputs._tokenID,
+    token.numberOfRequests.minus(BigInt.fromI32(1)),
+    request.numberOfRounds.minus(BigInt.fromI32(1))
+  )
+
+  let roundToUpdate
+  if (lastRound.value1[1].equals(BigInt.fromI32(0)) && lastRound.value1[1].equals(BigInt.fromI32(0))) {
+    // An appeal was raised.
+    // Create a new round.
+    let newRound = new Round(`${request.id}-${request.numberOfRounds}`)
+    request.numberOfRounds = request.numberOfRounds.plus(BigInt.fromI32(1));
+    newRound.request = request.id;
+    newRound.amountPaidRequester = BigInt.fromI32(0)
+    newRound.amountPaidChallenger = BigInt.fromI32(0)
+    newRound.feeRewards = BigInt.fromI32(0)
+    newRound.hasPaidRequester = false;
+    newRound.hasPaidChallenger = false;
+    newRound.save()
+
+    roundToUpdate = Round.load(`${request.id}-${request.numberOfRounds.minus(BigInt.fromI32(2))}`)
+
+  } else {
+    // The round is still collecting fees.
+    roundToUpdate = Round.load(`${request.id}-${request.numberOfRounds.minus(BigInt.fromI32(1))}`)
+  }
+
+  roundToUpdate.feeRewards = lastRound.value3
+  roundToUpdate.amountPaidRequester = lastRound.value1[1]
+  roundToUpdate.amountPaidChallenger = lastRound.value1[2]
+  roundToUpdate.hasPaidRequester = lastRound.value2[1]
+  roundToUpdate.hasPaidChallenger = lastRound.value2[2]
+  roundToUpdate.save()
+  request.save()
 }
 
 export function handleSubmitEvidence(call: SubmitEvidenceCall): void {
