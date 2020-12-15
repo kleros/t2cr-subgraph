@@ -84,6 +84,8 @@ type Request @entity {
   token: Token!
   "The evidences submitted for this request."
   evidences: [Evidence!]! @derivedFrom(field: "request")
+  "The number of evidence submitted"
+  numberOfEvidences: BigInt!
 }
 
 type Evidence @entity {

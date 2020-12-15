@@ -27,4 +27,11 @@ dataSources:
           handler: handleRequestSubmitted
         - event: TokenStatusChange(indexed address,indexed address,indexed bytes32,uint8,bool,bool)
           handler: handleTokenStatusChange
+        - event: Ruling(indexed address,indexed uint256,indexed uint256)
+          handler: handleRuling
+      callHandlers:
+        - function: fundAppeal(bytes32,uint8)
+          handler: handleFundAppeal
+        - function: submitEvidence(bytes32,string)
+          handler: handleSubmitEvidence
       file: ./src/mapping.ts
