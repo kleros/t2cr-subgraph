@@ -140,10 +140,15 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
 
   // Ruling enforcement is handled in handleRuling, so we'll skip it here.
   if (request.resolutionTime.gt(BigInt.fromI32(0))) return;
+  //Appeals are handled in handleFundAppeal. Skip.
+  if (event.params._appealed) return
+
+  // Handle dispute creation.
 
   let round = Round.load(`${request.id}-${request.numberOfRounds.minus(BigInt.fromI32(1))}`)
 
   let newRound = new Round(`${request.id}-${request.numberOfRounds}`)
+  request.numberOfRounds = request.numberOfRounds.plus(BigInt.fromI32(1));
   newRound.request = request.id
   newRound.amountPaidRequester = BigInt.fromI32(0)
   newRound.amountPaidChallenger = BigInt.fromI32(0)
@@ -151,12 +156,7 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
   newRound.hasPaidRequester = false;
   newRound.hasPaidChallenger = false;
 
-  request.numberOfRounds = request.numberOfRounds.plus(BigInt.fromI32(1));
-
   let arbitrator = IArbitrator.bind(request.arbitrator as Address);
-
-  if (!event.params._appealed) {
-    // Request was challenged (i.e. dispute created).
   let arbitrationCost = arbitrator.arbitrationCost(request.arbitratorExtraData);
   round.amountPaidChallenger = arbitrationCost.plus(
     arbitrationCost.times(tcr.sharedStakeMultiplier()).div(tcr.MULTIPLIER_DIVISOR())
@@ -172,15 +172,6 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
   )
   request.disputeID = requestInfo.value1;
   request.disputeCreationTime = event.block.timestamp;
-  } else {
-    // Dispute appealed.
-    let roundInfo = tcr.getRoundInfo(
-      event.params._tokenID,
-      token.numberOfRequests.minus(BigInt.fromI32(1)),
-      request.numberOfRounds.minus(BigInt.fromI32(2))
-    )
-    round.feeRewards = roundInfo.value3
-  }
 
   request.save()
   round.save()
