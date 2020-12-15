@@ -226,15 +226,20 @@ export function handleFundAppeal(call: FundAppealCall): void {
   let token = Token.load(call.inputs._tokenID.toHexString())
   let request = Request.load(`${token.id}-${token.numberOfRequests.minus(BigInt.fromI32(1))}`)
 
-  let lastRound = tcr.getRoundInfo(
+  // The lastRoundInfo object will hold the information
+  // that we want to copy from the smart contract.
+  // If a new round was created, we will use the penultimate
+  // round.
+  let lastRoundInfo = tcr.getRoundInfo(
     call.inputs._tokenID,
     token.numberOfRequests.minus(BigInt.fromI32(1)),
     request.numberOfRounds.minus(BigInt.fromI32(1))
   )
 
-  let roundToUpdate
-  if (lastRound.value1[1].equals(BigInt.fromI32(0)) && lastRound.value1[1].equals(BigInt.fromI32(0))) {
+  let roundToUpdate = Round.load(`${request.id}-${request.numberOfRounds.minus(BigInt.fromI32(1))}`)
+  if (lastRoundInfo.value1[1].equals(BigInt.fromI32(0)) && lastRoundInfo.value1[1].equals(BigInt.fromI32(0))) {
     // An appeal was raised.
+
     // Create a new round.
     let newRound = new Round(`${request.id}-${request.numberOfRounds}`)
     request.numberOfRounds = request.numberOfRounds.plus(BigInt.fromI32(1));
@@ -246,18 +251,19 @@ export function handleFundAppeal(call: FundAppealCall): void {
     newRound.hasPaidChallenger = false;
     newRound.save()
 
-    roundToUpdate = Round.load(`${request.id}-${request.numberOfRounds.minus(BigInt.fromI32(2))}`)
-
-  } else {
-    // The round is still collecting fees.
-    roundToUpdate = Round.load(`${request.id}-${request.numberOfRounds.minus(BigInt.fromI32(1))}`)
+    // Get information from the penultimate round to copy.
+    lastRoundInfo = tcr.getRoundInfo(
+      call.inputs._tokenID,
+      token.numberOfRequests.minus(BigInt.fromI32(1)),
+      request.numberOfRounds.minus(BigInt.fromI32(2))
+    )
   }
 
-  roundToUpdate.feeRewards = lastRound.value3
-  roundToUpdate.amountPaidRequester = lastRound.value1[1]
-  roundToUpdate.amountPaidChallenger = lastRound.value1[2]
-  roundToUpdate.hasPaidRequester = lastRound.value2[1]
-  roundToUpdate.hasPaidChallenger = lastRound.value2[2]
+  roundToUpdate.feeRewards = lastRoundInfo.value3
+  roundToUpdate.amountPaidRequester = lastRoundInfo.value1[1]
+  roundToUpdate.amountPaidChallenger = lastRoundInfo.value1[2]
+  roundToUpdate.hasPaidRequester = lastRoundInfo.value2[1]
+  roundToUpdate.hasPaidChallenger = lastRoundInfo.value2[2]
   roundToUpdate.save()
   request.save()
 }
