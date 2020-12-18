@@ -1,5 +1,5 @@
 import { Address, BigInt, ByteArray, Bytes, crypto } from "@graphprotocol/graph-ts";
-import { ArbitrableTokenList, FundAppealCall, RequestSubmitted, Ruling, SubmitEvidenceCall, TokenStatusChange } from "../generated/ArbitrableTokenList/ArbitrableTokenList";
+import { ArbitrableTokenList, FundAppealCall, MetaEvidence, RequestSubmitted, Ruling, SubmitEvidenceCall, TokenStatusChange } from "../generated/ArbitrableTokenList/ArbitrableTokenList";
 import { IArbitrator } from "../generated/ArbitrableTokenList/IArbitrator";
 import { Request, Token, Registry, Round, Evidence } from "../generated/schema";
 
@@ -283,4 +283,25 @@ export function handleSubmitEvidence(call: SubmitEvidenceCall): void {
   evidence.request = request.id;
 
   request.numberOfEvidences = request.numberOfEvidences.plus(BigInt.fromI32(1));
+}
+
+export function handleMetaEvidence(event: MetaEvidence): void {
+  let registry = Registry.load(event.address.toHexString())
+
+  if (!registry) {
+    registry = new Registry(event.address.toHexString());
+    registry.numberOfSubmissions = BigInt.fromI32(0);
+    registry.numberOfMetaEvidenceEvents = BigInt.fromI32(0);
+    registry.registrationMetaEvidenceURI = ''
+    registry.clearingMetaEvidenceURI = ''
+  }
+
+  if (registry.numberOfMetaEvidenceEvents.mod(BigInt.fromI32(2)).equals(BigInt.fromI32(0))) {
+    registry.registrationMetaEvidenceURI = event.params._evidence
+  } else {
+    registry.clearingMetaEvidenceURI = event.params._evidence
+  }
+
+  registry.numberOfMetaEvidenceEvents = registry.numberOfMetaEvidenceEvents.plus(BigInt.fromI32(1));
+  registry.save()
 }

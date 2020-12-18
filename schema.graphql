@@ -44,7 +44,9 @@ type Registry @entity {
   "The tokens submitted to this list"
   tokens: [Token!]! @derivedFrom(field: "registry")
   "The total number of tokens ever submitted"
-  numberOfSubmissions: Int!
+  numberOfSubmissions: BigInt!
+  "The total number of meta evidence events emitted"
+  numberOfMetaEvidenceEvents: BigInt!
 }
 
 type Request @entity {
