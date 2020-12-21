@@ -25,6 +25,8 @@ enum Result {
   Accepted
   "The request was rejected"
   Rejected
+  "The request was rejected due to arbitrators refusing to rule."
+  Reverted
 }
 
 enum RequestType {

@@ -7,6 +7,7 @@ import { Request, Token, Registry, Round, Evidence } from "../generated/schema";
 const PENDING = 'Pending'
 const ACCEPTED = 'Accepted'
 const REJECTED = 'Rejected'
+const REVERTED = 'Reverted'
 
 // RequestType
 const REGISTRATION = 'Registration'
@@ -41,7 +42,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
 
   if (token == null) {
     token = new Token(event.params._tokenID.toHexString());
-    registry.numberOfSubmissions++;
+    registry.numberOfSubmissions = registry.numberOfSubmissions.plus(BigInt.fromI32(1));
 
     token.registry = registry.id
     token.name = tokenInfo.value0;
@@ -55,11 +56,10 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
     token.numberOfRequests = BigInt.fromI32(0);
   }
 
-  token.numberOfRequests = token.numberOfRequests.plus(BigInt.fromI32(1));
-
   let request = new Request(
-    token.id + '-0'
+    token.id + '-' + token.numberOfRequests.toString()
   )
+  token.numberOfRequests = token.numberOfRequests.plus(BigInt.fromI32(1));
   request.token = token.id
   request.submissionTime = event.block.timestamp;
   request.result = PENDING
@@ -70,6 +70,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.resolutionTime = BigInt.fromI32(0);
   request.disputed = false;
   request.disputeID = BigInt.fromI32(0);
+  request.disputeCreationTime = BigInt.fromI32(0);
   request.challenger = ZERO_ADDRESS
   request.disputeOutcome = NONE;
   request.numberOfRounds = BigInt.fromI32(1);
@@ -87,7 +88,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
 
   request.metaEvidenceURI = request.type == REGISTRATION
     ? registry.registrationMetaEvidenceURI
-    : registry.registrationMetaEvidenceURI
+    : registry.clearingMetaEvidenceURI
 
   let round = new Round(
     request.id + '-0'
@@ -112,7 +113,8 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
 export function handleTokenStatusChange(event: TokenStatusChange): void {
   let tcr = ArbitrableTokenList.bind(event.address);
   let token = Token.load(event.params._tokenID.toHexString())
-  let request = Request.load(`${token.id}-${token.numberOfRequests.minus(BigInt.fromI32(1))}`)
+  let request = Request.load(token.id+'-'+token.numberOfRequests.minus(BigInt.fromI32(1)).toString())
+
   if (event.params._challenger == ZERO_ADDRESS) {
     // If there is no challenger, either:
     // - This is a new request;
@@ -145,10 +147,16 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
 
   // Handle dispute creation.
 
-  let round = Round.load(`${request.id}-${request.numberOfRounds.minus(BigInt.fromI32(1))}`)
+  let requestInfo = tcr.getRequestInfo(
+    event.params._tokenID,
+    token.numberOfRequests.minus(BigInt.fromI32(1))
+  )
+  let round = Round.load(request.id+'-'+requestInfo.value5.minus(BigInt.fromI32(2)).toString())
+  request.numberOfRounds = requestInfo.value5
 
-  let newRound = new Round(`${request.id}-${request.numberOfRounds}`)
-  request.numberOfRounds = request.numberOfRounds.plus(BigInt.fromI32(1));
+  let newRound = new Round(
+    request.id+'-'+requestInfo.value5.minus(BigInt.fromI32(1)).toString()
+  )
   newRound.request = request.id
   newRound.amountPaidRequester = BigInt.fromI32(0)
   newRound.amountPaidChallenger = BigInt.fromI32(0)
@@ -166,10 +174,6 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
   )
   request.disputed = true
 
-  let requestInfo = tcr.getRequestInfo(
-    event.params._tokenID,
-    token.numberOfRequests.minus(BigInt.fromI32(1))
-  )
   request.disputeID = requestInfo.value1;
   request.disputeCreationTime = event.block.timestamp;
 
@@ -183,7 +187,7 @@ export function handleRuling(event: Ruling): void {
   let tcr = ArbitrableTokenList.bind(event.address);
   let tokenID = tcr.arbitratorDisputeIDToTokenID(event.params._arbitrator, event.params._disputeID);
   let token = Token.load(tokenID.toHexString());
-  let request = Request.load(`${token.id}-${token.numberOfRequests.minus(BigInt.fromI32(1))}`)
+  let request = Request.load(token.id+'-'+token.numberOfRequests.minus(BigInt.fromI32(1)).toString())
 
   let winner = event.params._ruling;
    // Update token state
@@ -199,13 +203,18 @@ export function handleRuling(event: Ruling): void {
           token.status = REGISTERED;
   }
 
-  request.resolutionTime = event.block.timestamp;
-  request.result = winner.equals(BigInt.fromI32(0))
-    ? NONE
-    : winner.equals(BigInt.fromI32(1))
-    ? ACCEPT
-    : REJECT;
+  if (winner.equals(BigInt.fromI32(0))) {
+    request.result = REVERTED
+    request.disputeOutcome = NONE
+  } else if (winner.equals(BigInt.fromI32(1))) {
+    request.result = ACCEPTED
+    request.disputeOutcome = ACCEPT
+  } else {
+    request.result = REJECTED
+    request.disputeOutcome = REJECT
+  }
 
+  request.resolutionTime = event.block.timestamp;
   request.save();
   token.save();
 }
@@ -224,25 +233,21 @@ export function handleFundAppeal(call: FundAppealCall): void {
   //   latest round.
   let tcr = ArbitrableTokenList.bind(call.to);
   let token = Token.load(call.inputs._tokenID.toHexString())
-  let request = Request.load(`${token.id}-${token.numberOfRequests.minus(BigInt.fromI32(1))}`)
-
-  // The lastRoundInfo object will hold the information
-  // that we want to copy from the smart contract.
-  // If a new round was created, we will use the penultimate
-  // round.
-  let lastRoundInfo = tcr.getRoundInfo(
+  let request = Request.load(token.id+'-'+token.numberOfRequests.minus(BigInt.fromI32(1)).toString())
+  let tokenInfo = tcr.getTokenInfo(call.inputs._tokenID)
+  let requestInfo = tcr.getRequestInfo(
     call.inputs._tokenID,
-    token.numberOfRequests.minus(BigInt.fromI32(1)),
-    request.numberOfRounds.minus(BigInt.fromI32(1))
+    tokenInfo.value5.minus(BigInt.fromI32(1))
   )
 
-  let roundToUpdate = Round.load(`${request.id}-${request.numberOfRounds.minus(BigInt.fromI32(1))}`)
-  if (lastRoundInfo.value1[1].equals(BigInt.fromI32(0)) && lastRoundInfo.value1[1].equals(BigInt.fromI32(0))) {
-    // An appeal was raised.
+  if (request.numberOfRounds < requestInfo.value5) {
+    // Appeal raised and new round created.
+    request.numberOfRounds = requestInfo.value5
 
-    // Create a new round.
-    let newRound = new Round(`${request.id}-${request.numberOfRounds}`)
-    request.numberOfRounds = request.numberOfRounds.plus(BigInt.fromI32(1));
+    // Create new round entity.
+    let newRound = new Round(
+      request.id+'-'+requestInfo.value5.minus(BigInt.fromI32(1)).toString()
+    )
     newRound.request = request.id;
     newRound.amountPaidRequester = BigInt.fromI32(0)
     newRound.amountPaidChallenger = BigInt.fromI32(0)
@@ -251,31 +256,52 @@ export function handleFundAppeal(call: FundAppealCall): void {
     newRound.hasPaidChallenger = false;
     newRound.save()
 
-    // Get information from the penultimate round to copy.
-    lastRoundInfo = tcr.getRoundInfo(
+    // Update appealed round with data from penultimate round.
+    let penultimateRoundInfo = tcr.getRoundInfo(
       call.inputs._tokenID,
-      token.numberOfRequests.minus(BigInt.fromI32(1)),
-      request.numberOfRounds.minus(BigInt.fromI32(2))
+      tokenInfo.value5.minus(BigInt.fromI32(1)),
+      requestInfo.value5.minus(BigInt.fromI32(2))
     )
+    let penultimateRound = Round.load(
+      request.id+'-'+requestInfo.value5.minus(BigInt.fromI32(2)).toString()
+    )
+    penultimateRound.feeRewards = penultimateRoundInfo.value3
+    penultimateRound.amountPaidRequester = penultimateRoundInfo.value1[1]
+    penultimateRound.amountPaidChallenger = penultimateRoundInfo.value1[2]
+    penultimateRound.hasPaidRequester = penultimateRoundInfo.value2[1]
+    penultimateRound.hasPaidChallenger = penultimateRoundInfo.value2[2]
+    penultimateRound.save()
+  } else {
+    // Appeal not raised yet, just collecting funds.
+    // Update last round entity with most recent data.
+    let latestRound = Round.load(
+      request.id+'-'+requestInfo.value5.minus(BigInt.fromI32(1)).toString()
+    )
+    let latestRoundInfo = tcr.getRoundInfo(
+      call.inputs._tokenID,
+      tokenInfo.value5.minus(BigInt.fromI32(1)),
+      requestInfo.value5.minus(BigInt.fromI32(1))
+    )
+    latestRound.feeRewards = latestRoundInfo.value3
+    latestRound.amountPaidRequester = latestRoundInfo.value1[1]
+    latestRound.amountPaidChallenger = latestRoundInfo.value1[2]
+    latestRound.hasPaidRequester = latestRoundInfo.value2[1]
+    latestRound.hasPaidChallenger = latestRoundInfo.value2[2]
+    latestRound.save()
   }
 
-  roundToUpdate.feeRewards = lastRoundInfo.value3
-  roundToUpdate.amountPaidRequester = lastRoundInfo.value1[1]
-  roundToUpdate.amountPaidChallenger = lastRoundInfo.value1[2]
-  roundToUpdate.hasPaidRequester = lastRoundInfo.value2[1]
-  roundToUpdate.hasPaidChallenger = lastRoundInfo.value2[2]
-  roundToUpdate.save()
   request.save()
+  token.save()
 }
 
 export function handleSubmitEvidence(call: SubmitEvidenceCall): void {
   let token = Token.load(call.inputs._tokenID.toHexString())
   let request = Request.load(
-    `${token.id}-${token.numberOfRequests.minus(BigInt.fromI32(1))}`
+    token.id+'-'+token.numberOfRequests.minus(BigInt.fromI32(1)).toString()
   )
 
   let evidence = new Evidence(
-    `${request.id}-${request.numberOfEvidences}`
+    request.id+'-'+request.numberOfEvidences.toString()
   )
   evidence.submissionTime = call.block.timestamp;
   evidence.submitter = call.from;
