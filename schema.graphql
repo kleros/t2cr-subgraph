@@ -82,8 +82,6 @@ type Request @entity {
   disputeOutcome: Ruling!
   "Tracks each round of a dispute in the form rounds[roundID]."
   rounds: [Round!]! @derivedFrom(field: "request")
-  "The ID of the evidence group for this request."
-  evidenceGroupID: BigInt!
   "The total number of rounds on this request."
   numberOfRounds: BigInt!
   "The token this request belongs to."

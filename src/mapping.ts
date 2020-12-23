@@ -1,11 +1,5 @@
 /* eslint-disable prefer-const */
-import {
-  Address,
-  BigInt,
-  ByteArray,
-  Bytes,
-  crypto
-} from '@graphprotocol/graph-ts';
+import { Address, BigInt, Bytes } from '@graphprotocol/graph-ts';
 import {
   ArbitrableTokenList,
   FundAppealCall,
@@ -42,13 +36,6 @@ const REJECT = 'Reject';
 let ZERO_ADDRESS = Bytes.fromHexString(
   '0x0000000000000000000000000000000000000000'
 ) as Bytes;
-
-function concatByteArrays(a: ByteArray, b: ByteArray): ByteArray {
-  let out = new Uint8Array(a.length + b.length);
-  for (let i = 0; i < a.length; i++) out[i] = a[i];
-  for (let j = 0; j < b.length; j++) out[a.length + j] = b[j];
-  return out as ByteArray;
-}
 
 export function handleRequestSubmitted(event: RequestSubmitted): void {
   let token = Token.load(event.params._tokenID.toHexString());
@@ -91,18 +78,6 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.arbitrator = tcr.arbitrator();
   request.arbitratorExtraData = tcr.arbitratorExtraData();
   request.numberOfEvidences = BigInt.fromI32(0);
-  request.evidenceGroupID = BigInt.fromI32(0);
-  // TODO: fix evidenceGroupID calculation.
-  // request.evidenceGroupID = BigInt.fromUnsignedBytes(
-  //   crypto.keccak256(
-  //     concatByteArrays(
-  //       event.params._tokenID,
-  //       ByteArray.fromI32(
-  //         token.numberOfRequests.minus(BigInt.fromI32(1)).toI32()
-  //       )
-  //     )
-  //   ) as Bytes
-  // );
 
   request.metaEvidenceURI =
     request.type == REGISTRATION
