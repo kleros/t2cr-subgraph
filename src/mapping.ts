@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 import {
   Address,
   BigInt,
@@ -38,12 +39,12 @@ const NONE = 'None';
 const ACCEPT = 'Accept';
 const REJECT = 'Reject';
 
-const ZERO_ADDRESS = Bytes.fromHexString(
+let ZERO_ADDRESS = Bytes.fromHexString(
   '0x0000000000000000000000000000000000000000'
 ) as Bytes;
 
 function concatByteArrays(a: ByteArray, b: ByteArray): ByteArray {
-  const out = new Uint8Array(a.length + b.length);
+  let out = new Uint8Array(a.length + b.length);
   for (let i = 0; i < a.length; i++) out[i] = a[i];
   for (let j = 0; j < b.length; j++) out[a.length + j] = b[j];
   return out as ByteArray;
@@ -51,9 +52,9 @@ function concatByteArrays(a: ByteArray, b: ByteArray): ByteArray {
 
 export function handleRequestSubmitted(event: RequestSubmitted): void {
   let token = Token.load(event.params._tokenID.toHexString());
-  const tcr = ArbitrableTokenList.bind(event.address);
-  const registry = Registry.load(event.address.toHexString());
-  const tokenInfo = tcr.getTokenInfo(event.params._tokenID);
+  let tcr = ArbitrableTokenList.bind(event.address);
+  let registry = Registry.load(event.address.toHexString());
+  let tokenInfo = tcr.getTokenInfo(event.params._tokenID);
 
   if (token == null) {
     token = new Token(event.params._tokenID.toHexString());
@@ -72,9 +73,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
     token.numberOfRequests = BigInt.fromI32(0);
   }
 
-  const request = new Request(
-    token.id + '-' + token.numberOfRequests.toString()
-  );
+  let request = new Request(token.id + '-' + token.numberOfRequests.toString());
   token.numberOfRequests = token.numberOfRequests.plus(BigInt.fromI32(1));
   request.token = token.id;
   request.submissionTime = event.block.timestamp;
@@ -92,23 +91,28 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.arbitrator = tcr.arbitrator();
   request.arbitratorExtraData = tcr.arbitratorExtraData();
   request.numberOfEvidences = BigInt.fromI32(0);
-  request.evidenceGroupID = BigInt.fromUnsignedBytes(
-    crypto.keccak256(
-      concatByteArrays(event.params._tokenID, ByteArray.fromI32(1))
-    ) as Bytes
-  );
+  request.evidenceGroupID = BigInt.fromI32(0);
+  // TODO: fix evidenceGroupID calculation.
+  // request.evidenceGroupID = BigInt.fromUnsignedBytes(
+  //   crypto.keccak256(
+  //     concatByteArrays(
+  //       event.params._tokenID,
+  //       ByteArray.fromI32(
+  //         token.numberOfRequests.minus(BigInt.fromI32(1)).toI32()
+  //       )
+  //     )
+  //   ) as Bytes
+  // );
 
   request.metaEvidenceURI =
     request.type == REGISTRATION
       ? registry.registrationMetaEvidenceURI
       : registry.clearingMetaEvidenceURI;
 
-  const round = new Round(request.id + '-0');
+  let round = new Round(request.id + '-0');
   round.request = request.id;
-  const arbitrator = IArbitrator.bind(request.arbitrator as Address);
-  const arbitrationCost = arbitrator.arbitrationCost(
-    request.arbitratorExtraData
-  );
+  let arbitrator = IArbitrator.bind(request.arbitrator as Address);
+  let arbitrationCost = arbitrator.arbitrationCost(request.arbitratorExtraData);
   round.amountPaidRequester = arbitrationCost.plus(
     arbitrationCost
       .times(tcr.sharedStakeMultiplier())
@@ -118,6 +122,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   round.hasPaidRequester = true;
   round.hasPaidChallenger = false;
   round.feeRewards = round.amountPaidRequester;
+  round.appealed = false;
 
   round.save();
   request.save();
@@ -126,9 +131,9 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
 }
 
 export function handleTokenStatusChange(event: TokenStatusChange): void {
-  const tcr = ArbitrableTokenList.bind(event.address);
-  const token = Token.load(event.params._tokenID.toHexString());
-  const request = Request.load(
+  let tcr = ArbitrableTokenList.bind(event.address);
+  let token = Token.load(event.params._tokenID.toHexString());
+  let request = Request.load(
     token.id + '-' + token.numberOfRequests.minus(BigInt.fromI32(1)).toString()
   );
 
@@ -168,16 +173,16 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
 
   // Handle dispute creation.
 
-  const requestInfo = tcr.getRequestInfo(
+  let requestInfo = tcr.getRequestInfo(
     event.params._tokenID,
     token.numberOfRequests.minus(BigInt.fromI32(1))
   );
-  const round = Round.load(
+  let round = Round.load(
     request.id + '-' + requestInfo.value5.minus(BigInt.fromI32(2)).toString()
   );
   request.numberOfRounds = requestInfo.value5;
 
-  const newRound = new Round(
+  let newRound = new Round(
     request.id + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString()
   );
   newRound.request = request.id;
@@ -186,11 +191,10 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
   newRound.feeRewards = BigInt.fromI32(0);
   newRound.hasPaidRequester = false;
   newRound.hasPaidChallenger = false;
+  newRound.appealed = false;
 
-  const arbitrator = IArbitrator.bind(request.arbitrator as Address);
-  const arbitrationCost = arbitrator.arbitrationCost(
-    request.arbitratorExtraData
-  );
+  let arbitrator = IArbitrator.bind(request.arbitrator as Address);
+  let arbitrationCost = arbitrator.arbitrationCost(request.arbitratorExtraData);
   round.amountPaidChallenger = arbitrationCost.plus(
     arbitrationCost
       .times(tcr.sharedStakeMultiplier())
@@ -201,10 +205,11 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
       .times(tcr.sharedStakeMultiplier())
       .div(tcr.MULTIPLIER_DIVISOR())
   );
-  request.disputed = true;
 
+  request.disputed = true;
   request.disputeID = requestInfo.value1;
   request.disputeCreationTime = event.block.timestamp;
+  request.challenger = event.params._challenger;
 
   request.save();
   round.save();
@@ -213,17 +218,17 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
 }
 
 export function handleRuling(event: Ruling): void {
-  const tcr = ArbitrableTokenList.bind(event.address);
-  const tokenID = tcr.arbitratorDisputeIDToTokenID(
+  let tcr = ArbitrableTokenList.bind(event.address);
+  let tokenID = tcr.arbitratorDisputeIDToTokenID(
     event.params._arbitrator,
     event.params._disputeID
   );
-  const token = Token.load(tokenID.toHexString());
-  const request = Request.load(
+  let token = Token.load(tokenID.toHexString());
+  let request = Request.load(
     token.id + '-' + token.numberOfRequests.minus(BigInt.fromI32(1)).toString()
   );
 
-  const winner = event.params._ruling;
+  let winner = event.params._ruling;
   // Update token state
   if (winner.equals(BigInt.fromI32(1))) {
     // Execute Request
@@ -263,13 +268,13 @@ export function handleFundAppeal(call: FundAppealCall): void {
   //   round.
   // - If it did not raise an appeal, we copy the data from the
   //   latest round.
-  const tcr = ArbitrableTokenList.bind(call.to);
-  const token = Token.load(call.inputs._tokenID.toHexString());
-  const request = Request.load(
+  let tcr = ArbitrableTokenList.bind(call.to);
+  let token = Token.load(call.inputs._tokenID.toHexString());
+  let request = Request.load(
     token.id + '-' + token.numberOfRequests.minus(BigInt.fromI32(1)).toString()
   );
-  const tokenInfo = tcr.getTokenInfo(call.inputs._tokenID);
-  const requestInfo = tcr.getRequestInfo(
+  let tokenInfo = tcr.getTokenInfo(call.inputs._tokenID);
+  let requestInfo = tcr.getRequestInfo(
     call.inputs._tokenID,
     tokenInfo.value5.minus(BigInt.fromI32(1))
   );
@@ -279,7 +284,7 @@ export function handleFundAppeal(call: FundAppealCall): void {
     request.numberOfRounds = requestInfo.value5;
 
     // Create new round entity.
-    const newRound = new Round(
+    let newRound = new Round(
       request.id + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString()
     );
     newRound.request = request.id;
@@ -288,15 +293,16 @@ export function handleFundAppeal(call: FundAppealCall): void {
     newRound.feeRewards = BigInt.fromI32(0);
     newRound.hasPaidRequester = false;
     newRound.hasPaidChallenger = false;
+    newRound.appealed = false;
     newRound.save();
 
     // Update appealed round with data from penultimate round.
-    const penultimateRoundInfo = tcr.getRoundInfo(
+    let penultimateRoundInfo = tcr.getRoundInfo(
       call.inputs._tokenID,
       tokenInfo.value5.minus(BigInt.fromI32(1)),
       requestInfo.value5.minus(BigInt.fromI32(2))
     );
-    const penultimateRound = Round.load(
+    let penultimateRound = Round.load(
       request.id + '-' + requestInfo.value5.minus(BigInt.fromI32(2)).toString()
     );
     penultimateRound.feeRewards = penultimateRoundInfo.value3;
@@ -304,14 +310,15 @@ export function handleFundAppeal(call: FundAppealCall): void {
     penultimateRound.amountPaidChallenger = penultimateRoundInfo.value1[2];
     penultimateRound.hasPaidRequester = penultimateRoundInfo.value2[1];
     penultimateRound.hasPaidChallenger = penultimateRoundInfo.value2[2];
+    penultimateRound.appealed = true;
     penultimateRound.save();
   } else {
     // Appeal not raised yet, just collecting funds.
     // Update last round entity with most recent data.
-    const latestRound = Round.load(
+    let latestRound = Round.load(
       request.id + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString()
     );
-    const latestRoundInfo = tcr.getRoundInfo(
+    let latestRoundInfo = tcr.getRoundInfo(
       call.inputs._tokenID,
       tokenInfo.value5.minus(BigInt.fromI32(1)),
       requestInfo.value5.minus(BigInt.fromI32(1))
@@ -329,12 +336,12 @@ export function handleFundAppeal(call: FundAppealCall): void {
 }
 
 export function handleSubmitEvidence(call: SubmitEvidenceCall): void {
-  const token = Token.load(call.inputs._tokenID.toHexString());
-  const request = Request.load(
+  let token = Token.load(call.inputs._tokenID.toHexString());
+  let request = Request.load(
     token.id + '-' + token.numberOfRequests.minus(BigInt.fromI32(1)).toString()
   );
 
-  const evidence = new Evidence(
+  let evidence = new Evidence(
     request.id + '-' + request.numberOfEvidences.toString()
   );
   evidence.submissionTime = call.block.timestamp;

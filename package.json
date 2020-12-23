@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "build": "graph codegen && graph build",
-    "deploy:mainnet": "yarn run build && graph deploy --node https://api.thegraph.com/deploy/ --ipfs https://api.thegraph.com/ipfs/ mtsalenc/t2cr-subgraph",
+    "deploy:mainnet": "yarn run build && graph deploy --node https://api.thegraph.com/deploy/ --ipfs https://api.thegraph.com/ipfs/ kleros/t2cr",
+    "deploy:kovan": "yarn run build && graph deploy --node https://api.thegraph.com/deploy/ --ipfs https://api.thegraph.com/ipfs/ mtsalenc/t2cr-subgraph-kovan",
     "prettier-format": "prettier --config .prettierrc 'src/**/*.ts' --write",
     "format": "yarn prettier-format && eslint . --ext .ts --fix",
     "lint": "eslint . --ext .ts && prettier --config .prettierrc 'src/**/*.ts' --check",

@@ -120,6 +120,8 @@ type Round @entity {
   hasPaidChallenger: Boolean!
   "Sum of reimbursable fees and stake rewards available to the parties that made contributions to the side that ultimately wins a dispute."
   feeRewards: BigInt!
+  "Whether this round was appealed."
+  appealed: Boolean!
   "The request to which this round belongs."
   request: Request!
 }
