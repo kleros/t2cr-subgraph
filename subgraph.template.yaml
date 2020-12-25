@@ -59,6 +59,8 @@ dataSources:
         - Round
         - Token
       abis:
+        - name: ArbitrableTokenList
+          file: ./abis/t2cr.json
         - name: IArbitrator
           file: ./abis/IArbitrator.json
       eventHandlers:
