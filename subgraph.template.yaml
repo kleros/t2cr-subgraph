@@ -6,9 +6,9 @@ schema:
 dataSources:
   - kind: ethereum/contract
     name: ArbitrableTokenList
-    network: mainnet
+    network: "{{network}}"
     source:
-      address: '0xEbcf3bcA271B26ae4B162Ba560e243055Af0E679'
+      address: "{{t2cr}}"
       abi: ArbitrableTokenList
       startBlock: 7309834
     mapping:
@@ -16,7 +16,11 @@ dataSources:
       apiVersion: 0.0.4
       language: wasm/assemblyscript
       entities:
+        - Registry
         - Request
+        - Evidence
+        - Round
+        - Token
       abis:
         - name: ArbitrableTokenList
           file: ./abis/t2cr.json
@@ -36,4 +40,28 @@ dataSources:
           handler: handleFundAppeal
         - function: submitEvidence(bytes32,string)
           handler: handleSubmitEvidence
+      file: ./src/mapping.ts
+  - kind: ethereum/contract
+    name: IArbitrator
+    network: mainnet
+    source:
+      address: "{{arbitrator}}"
+      abi: IArbitrator
+      startBlock: 7303699
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.4
+      language: wasm/assemblyscript
+      entities:
+        - Registry
+        - Request
+        - Evidence
+        - Round
+        - Token
+      abis:
+        - name: IArbitrator
+          file: ./abis/IArbitrator.json
+      eventHandlers:
+        - event: AppealPossible(indexed uint256,indexed address)
+          handler: handleAppealPossible
       file: ./src/mapping.ts

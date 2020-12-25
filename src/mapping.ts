@@ -9,7 +9,10 @@ import {
   SubmitEvidenceCall,
   TokenStatusChange
 } from '../generated/ArbitrableTokenList/ArbitrableTokenList';
-import { IArbitrator } from '../generated/ArbitrableTokenList/IArbitrator';
+import {
+  IArbitrator,
+  AppealPossible
+} from '../generated/ArbitrableTokenList/IArbitrator';
 import { Request, Token, Registry, Round, Evidence } from '../generated/schema';
 
 // Result
@@ -73,7 +76,6 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.disputeID = BigInt.fromI32(0);
   request.disputeCreationTime = BigInt.fromI32(0);
   request.challenger = ZERO_ADDRESS;
-  request.disputeOutcome = NONE;
   request.numberOfRounds = BigInt.fromI32(1);
   request.arbitrator = tcr.arbitrator();
   request.arbitratorExtraData = tcr.arbitratorExtraData();
@@ -217,13 +219,10 @@ export function handleRuling(event: Ruling): void {
 
   if (winner.equals(BigInt.fromI32(0))) {
     request.result = REVERTED;
-    request.disputeOutcome = NONE;
   } else if (winner.equals(BigInt.fromI32(1))) {
     request.result = ACCEPTED;
-    request.disputeOutcome = ACCEPT;
   } else {
     request.result = REJECTED;
-    request.disputeOutcome = REJECT;
   }
 
   request.resolutionTime = event.block.timestamp;
@@ -354,4 +353,34 @@ export function handleMetaEvidence(event: MetaEvidence): void {
     BigInt.fromI32(1)
   );
   registry.save();
+}
+
+export function handleAppealPossible(event: AppealPossible): void {
+  let registry = Registry.load(event.params._arbitrable.toHexString());
+  if (registry == null) return; // Event not related to the t2cr.
+
+  let tcr = ArbitrableTokenList.bind(event.params._arbitrable);
+  let tokenID = tcr.arbitratorDisputeIDToTokenID(
+    event.address,
+    event.params._disputeID
+  );
+  let token = Token.load(tokenID.toHexString());
+  let request = Request.load(
+    token.id + '-' + token.numberOfRequests.minus(BigInt.fromI32(1)).toString()
+  );
+
+  let round = Round.load(
+    request.id +
+      '-' +
+      request.numberOfRounds.minus(BigInt.fromI32(1)).toString()
+  );
+  let arbitrator = IArbitrator.bind(event.address);
+  let currentRuling = arbitrator.currentRuling(request.disputeID);
+  round.ruling =
+    currentRuling == BigInt.fromI32(0)
+      ? NONE
+      : currentRuling == BigInt.fromI32(1)
+      ? ACCEPT
+      : REJECT;
+  round.save();
 }

@@ -19,14 +19,14 @@ enum Ruling {
 }
 
 enum Result {
-  "The request is still being processed."
-  Pending
+  "The request was rejected due to arbitrators refusing to rule."
+  Reverted
   "The request was accepted."
   Accepted
   "The request was rejected"
   Rejected
-  "The request was rejected due to arbitrators refusing to rule."
-  Reverted
+  "The request is still being processed."
+  Pending
 }
 
 enum RequestType {
@@ -78,8 +78,6 @@ type Request @entity {
   disputeCreationTime: BigInt!
   "The address of the party that challenged the request"
   challenger: Bytes!
-  "The outcome of the dispute, if any. Note that unsuccessful appeal fundings can invert the arbitrator ruling (so this may differ from the ruling given by the arbitrator)."
-  disputeOutcome: Ruling!
   "Tracks each round of a dispute in the form rounds[roundID]."
   rounds: [Round!]! @derivedFrom(field: "request")
   "The total number of rounds on this request."
@@ -122,6 +120,8 @@ type Round @entity {
   appealed: Boolean!
   "The request to which this round belongs."
   request: Request!
+  "The ruling given by the arbitrator, if any."
+  ruling: Ruling!
 }
 
 type Token @entity {
