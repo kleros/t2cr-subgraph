@@ -116,12 +116,18 @@ type Round @entity {
   hasPaidChallenger: Boolean!
   "Sum of reimbursable fees and stake rewards available to the parties that made contributions to the side that ultimately wins a dispute."
   feeRewards: BigInt!
-  "Whether this round was appealed."
-  appealed: Boolean!
+  "The time this round was appealed, if any."
+  appealTime: BigInt!
   "The request to which this round belongs."
   request: Request!
   "The ruling given by the arbitrator, if any."
   ruling: Ruling!
+  "The time the ruling was given."
+  rulingTime: BigInt!
+  "The start of the appeal period, if any."
+  appealPeriodStart: BigInt!
+  "The end of the appeal period, if any."
+  appealPeriodEnd: BigInt!
 }
 
 type Token @entity {

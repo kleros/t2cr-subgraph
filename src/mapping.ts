@@ -99,7 +99,11 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   round.hasPaidRequester = true;
   round.hasPaidChallenger = false;
   round.feeRewards = round.amountPaidRequester;
-  round.appealed = false;
+  round.appealTime = BigInt.fromI32(0);
+  round.rulingTime = BigInt.fromI32(0);
+  round.appealPeriodStart = BigInt.fromI32(0);
+  round.appealPeriodEnd = BigInt.fromI32(0);
+  round.ruling = NONE;
 
   round.save();
   request.save();
@@ -168,7 +172,11 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
   newRound.feeRewards = BigInt.fromI32(0);
   newRound.hasPaidRequester = false;
   newRound.hasPaidChallenger = false;
-  newRound.appealed = false;
+  newRound.appealTime = BigInt.fromI32(0);
+  newRound.rulingTime = BigInt.fromI32(0);
+  newRound.appealPeriodStart = BigInt.fromI32(0);
+  newRound.appealPeriodEnd = BigInt.fromI32(0);
+  newRound.ruling = NONE;
 
   let arbitrator = IArbitrator.bind(request.arbitrator as Address);
   let arbitrationCost = arbitrator.arbitrationCost(request.arbitratorExtraData);
@@ -267,7 +275,11 @@ export function handleFundAppeal(call: FundAppealCall): void {
     newRound.feeRewards = BigInt.fromI32(0);
     newRound.hasPaidRequester = false;
     newRound.hasPaidChallenger = false;
-    newRound.appealed = false;
+    newRound.appealTime = BigInt.fromI32(0);
+    newRound.rulingTime = BigInt.fromI32(0);
+    newRound.appealPeriodStart = BigInt.fromI32(0);
+    newRound.appealPeriodEnd = BigInt.fromI32(0);
+    newRound.ruling = NONE;
     newRound.save();
 
     // Update appealed round with data from penultimate round.
@@ -284,7 +296,7 @@ export function handleFundAppeal(call: FundAppealCall): void {
     penultimateRound.amountPaidChallenger = penultimateRoundInfo.value1[2];
     penultimateRound.hasPaidRequester = penultimateRoundInfo.value2[1];
     penultimateRound.hasPaidChallenger = penultimateRoundInfo.value2[2];
-    penultimateRound.appealed = true;
+    penultimateRound.appealTime = call.block.timestamp;
     penultimateRound.save();
   } else {
     // Appeal not raised yet, just collecting funds.
@@ -374,7 +386,13 @@ export function handleAppealPossible(event: AppealPossible): void {
       '-' +
       request.numberOfRounds.minus(BigInt.fromI32(1)).toString()
   );
+  round.rulingTime = event.block.timestamp;
+
   let arbitrator = IArbitrator.bind(event.address);
+  let appealPeriod = arbitrator.appealPeriod(event.params._disputeID);
+  round.appealPeriodStart = appealPeriod.value0;
+  round.appealPeriodEnd = appealPeriod.value1;
+
   let currentRuling = arbitrator.currentRuling(request.disputeID);
   round.ruling =
     currentRuling == BigInt.fromI32(0)
