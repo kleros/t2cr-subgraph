@@ -29,13 +29,6 @@ enum Result {
   Pending
 }
 
-enum RequestType {
-  "This is a request to add an token to the list"
-  Registration
-  "This is a request to remove an token from the list"
-  Removal
-}
-
 type Registry @entity {
   "The registry address"
   id: ID!
@@ -58,8 +51,8 @@ type Request @entity {
   submissionTime: BigInt!
   "Whether the request was accepted or rejected."
   result: Result!
-  "The request type. A user can request to add or remove a token."
-  type: RequestType!
+  "The request type. Can be either RegistrationRequested or ClearingRequested."
+  type: Status!
   "The address that placed the request."
   requester: Bytes!
   "The time the request was resolved or 0 if it is not resolved."

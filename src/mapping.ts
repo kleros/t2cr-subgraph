@@ -21,10 +21,6 @@ const ACCEPTED = 'Accepted';
 const REJECTED = 'Rejected';
 const REVERTED = 'Reverted';
 
-// RequestType
-const REGISTRATION = 'Registration';
-const REMOVAL = 'Removal';
-
 // Status
 const ABSENT = 'Absent';
 const REGISTERED = 'Registered';
@@ -69,7 +65,9 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.submissionTime = event.block.timestamp;
   request.result = PENDING;
   request.type =
-    token.status == REGISTRATION_REQUESTED ? REGISTRATION : REMOVAL;
+    token.status == REGISTRATION_REQUESTED
+      ? REGISTRATION_REQUESTED
+      : CLEARING_REQUESTED;
   request.requester = event.transaction.from;
   request.resolutionTime = BigInt.fromI32(0);
   request.disputed = false;
@@ -82,7 +80,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.numberOfEvidences = BigInt.fromI32(0);
 
   request.metaEvidenceURI =
-    request.type == REGISTRATION
+    request.type == REGISTRATION_REQUESTED
       ? registry.registrationMetaEvidenceURI
       : registry.clearingMetaEvidenceURI;
 
@@ -133,6 +131,7 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
 
     // Request executed.
     request.resolutionTime = event.block.timestamp;
+    request.result = ACCEPTED;
     token.status =
       request.type == REGISTRATION_REQUESTED
         ? (token.status = REGISTERED)
