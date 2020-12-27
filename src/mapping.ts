@@ -113,6 +113,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
 
 export function handleTokenStatusChange(event: TokenStatusChange): void {
   let tcr = ArbitrableTokenList.bind(event.address);
+  let tokenInfo = tcr.getTokenInfo(event.params._tokenID);
   let token = Token.load(event.params._tokenID.toHexString());
   let request = Request.load(
     token.id + '-' + token.numberOfRequests.minus(BigInt.fromI32(1)).toString()
@@ -124,8 +125,8 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
     // - A request was executed (i.e. it was accepted).
 
     if (
-      token.status == REGISTRATION_REQUESTED ||
-      token.status == CLEARING_REQUESTED
+      tokenInfo.value4 == 2 || // RegistrationRequested
+      tokenInfo.value4 == 3 // ClearingRequested
     ) {
       return; // New requests are handled in handleRequestSubmitted.
     }
@@ -180,6 +181,7 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
 
   let arbitrator = IArbitrator.bind(request.arbitrator as Address);
   let arbitrationCost = arbitrator.arbitrationCost(request.arbitratorExtraData);
+  round.hasPaidChallenger = true;
   round.amountPaidChallenger = arbitrationCost.plus(
     arbitrationCost
       .times(tcr.sharedStakeMultiplier())
