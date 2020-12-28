@@ -53,14 +53,15 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
     token.ticker = tokenInfo.value1;
     token.address = tokenInfo.value2;
     token.symbolMultihash = tokenInfo.value3;
-    token.numberOfRequests = BigInt.fromI32(0);
   }
 
-  token.numberOfRequests = token.numberOfRequests.plus(BigInt.fromI32(1));
+  token.numberOfRequests = tokenInfo.value5;
   token.status =
     tokenInfo.value4 == 2 ? REGISTRATION_REQUESTED : CLEARING_REQUESTED;
 
-  let request = new Request(token.id + '-' + token.numberOfRequests.toString());
+  let request = new Request(
+    token.id + '-' + tokenInfo.value5.minus(BigInt.fromI32(1)).toString()
+  );
   request.token = token.id;
   request.submissionTime = event.block.timestamp;
   request.result = PENDING;
@@ -114,7 +115,7 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
   let tokenInfo = tcr.getTokenInfo(event.params._tokenID);
   let token = Token.load(event.params._tokenID.toHexString());
   let request = Request.load(
-    token.id + '-' + token.numberOfRequests.minus(BigInt.fromI32(1)).toString()
+    token.id + '-' + tokenInfo.value5.minus(BigInt.fromI32(1)).toString()
   );
 
   if (event.params._challenger == ZERO_ADDRESS) {
@@ -132,10 +133,8 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
     // Request executed.
     request.resolutionTime = event.block.timestamp;
     request.result = ACCEPTED;
-    token.status =
-      request.type == REGISTRATION_REQUESTED
-        ? (token.status = REGISTERED)
-        : (token.status = ABSENT);
+    if (request.type == REGISTRATION_REQUESTED) token.status = REGISTERED;
+    else token.status = ABSENT;
 
     token.save();
     request.save();
