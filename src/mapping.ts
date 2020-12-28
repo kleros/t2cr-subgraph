@@ -53,14 +53,14 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
     token.ticker = tokenInfo.value1;
     token.address = tokenInfo.value2;
     token.symbolMultihash = tokenInfo.value3;
-    token.status =
-      tokenInfo.value4 == 2 ? REGISTRATION_REQUESTED : CLEARING_REQUESTED;
-
     token.numberOfRequests = BigInt.fromI32(0);
   }
 
-  let request = new Request(token.id + '-' + token.numberOfRequests.toString());
   token.numberOfRequests = token.numberOfRequests.plus(BigInt.fromI32(1));
+  token.status =
+    tokenInfo.value4 == 2 ? REGISTRATION_REQUESTED : CLEARING_REQUESTED;
+
+  let request = new Request(token.id + '-' + token.numberOfRequests.toString());
   request.token = token.id;
   request.submissionTime = event.block.timestamp;
   request.result = PENDING;

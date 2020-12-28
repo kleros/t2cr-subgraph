@@ -49,5 +49,9 @@
       "pre-commit": "yarn lint",
       "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
     }
+  },
+  "volta": {
+    "node": "14.15.3",
+    "yarn": "1.22.10"
   }
 }
