@@ -53,6 +53,9 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
     token.ticker = tokenInfo.value1;
     token.address = tokenInfo.value2;
     token.symbolMultihash = tokenInfo.value3;
+    token.disputed = false;
+    token.appealPeriodStart = BigInt.fromI32(0);
+    token.appealPeriodEnd = BigInt.fromI32(0);
   }
 
   token.numberOfRequests = tokenInfo.value5;
@@ -196,6 +199,8 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
   request.disputeCreationTime = event.block.timestamp;
   request.challenger = event.params._challenger;
 
+  token.disputed = true;
+
   request.save();
   round.save();
   newRound.save();
@@ -234,6 +239,8 @@ export function handleRuling(event: Ruling): void {
   }
 
   request.resolutionTime = event.block.timestamp;
+  token.disputed = false;
+
   request.save();
   token.save();
 }
@@ -392,6 +399,8 @@ export function handleAppealPossible(event: AppealPossible): void {
   let appealPeriod = arbitrator.appealPeriod(event.params._disputeID);
   round.appealPeriodStart = appealPeriod.value0;
   round.appealPeriodEnd = appealPeriod.value1;
+  token.appealPeriodStart = appealPeriod.value0;
+  token.appealPeriodEnd = appealPeriod.value1;
 
   let currentRuling = arbitrator.currentRuling(request.disputeID);
   round.ruling =

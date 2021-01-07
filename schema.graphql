@@ -109,7 +109,7 @@ type Round @entity {
   hasPaidChallenger: Boolean!
   "Sum of reimbursable fees and stake rewards available to the parties that made contributions to the side that ultimately wins a dispute."
   feeRewards: BigInt!
-  "The time this round was appealed, if any."
+  "The time this round was appealed, if it was."
   appealTime: BigInt!
   "The request to which this round belongs."
   request: Request!
@@ -135,11 +135,17 @@ type Token @entity {
   "The address of the token contract."
   address: Bytes!
   "The multihash of the token image."
-  symbolMultihash:String!
+  symbolMultihash: String!
   "The current status of the token."
   status: Status!
   "The requests submitted for the token."
   requests: [Request!]! @derivedFrom(field: "token")
   "The registry this token was submitted to."
   registry: Registry!
+  "Whether the token is currently disputed."
+  disputed: Boolean!
+  "The start of the appeal period, if any."
+  appealPeriodStart: BigInt!
+  "The end of the appeal period, if any."
+  appealPeriodEnd: BigInt!
 }
