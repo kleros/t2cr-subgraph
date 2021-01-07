@@ -240,6 +240,8 @@ export function handleRuling(event: Ruling): void {
 
   request.resolutionTime = event.block.timestamp;
   token.disputed = false;
+  token.appealPeriodStart = BigInt.fromI32(0);
+  token.appealPeriodEnd = BigInt.fromI32(0);
 
   request.save();
   token.save();
