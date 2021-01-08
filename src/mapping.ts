@@ -58,6 +58,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
     token.appealPeriodEnd = BigInt.fromI32(0);
   }
 
+  token.latestRequestTime = event.block.timestamp;
   token.numberOfRequests = tokenInfo.value5;
   token.status =
     tokenInfo.value4 == 2 ? REGISTRATION_REQUESTED : CLEARING_REQUESTED;
