@@ -148,6 +148,6 @@ type Token @entity {
   appealPeriodStart: BigInt!
   "The end of the appeal period, if any."
   appealPeriodEnd: BigInt!
-  "The time the most recent request was made."
-  latestRequestTime: BigInt!
+  "The last time the token status changed."
+  lastStatusChangeTime: BigInt!
 }

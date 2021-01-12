@@ -58,7 +58,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
     token.appealPeriodEnd = BigInt.fromI32(0);
   }
 
-  token.latestRequestTime = event.block.timestamp;
+  token.lastStatusChangeTime = event.block.timestamp;
   token.numberOfRequests = tokenInfo.value5;
   token.status =
     tokenInfo.value4 == 2 ? REGISTRATION_REQUESTED : CLEARING_REQUESTED;
@@ -140,6 +140,7 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
     if (request.type == REGISTRATION_REQUESTED) token.status = REGISTERED;
     else token.status = ABSENT;
 
+    token.lastStatusChangeTime = event.block.timestamp;
     token.save();
     request.save();
     return;
@@ -201,6 +202,7 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
   request.challenger = event.params._challenger;
 
   token.disputed = true;
+  token.lastStatusChangeTime = event.block.timestamp;
 
   request.save();
   round.save();
@@ -243,6 +245,7 @@ export function handleRuling(event: Ruling): void {
   token.disputed = false;
   token.appealPeriodStart = BigInt.fromI32(0);
   token.appealPeriodEnd = BigInt.fromI32(0);
+  token.lastStatusChangeTime = event.block.timestamp;
 
   request.save();
   token.save();
@@ -308,6 +311,8 @@ export function handleFundAppeal(call: FundAppealCall): void {
     penultimateRound.hasPaidChallenger = penultimateRoundInfo.value2[2];
     penultimateRound.appealTime = call.block.timestamp;
     penultimateRound.save();
+
+    token.lastStatusChangeTime = call.block.timestamp;
   } else {
     // Appeal not raised yet, just collecting funds.
     // Update last round entity with most recent data.
@@ -396,14 +401,12 @@ export function handleAppealPossible(event: AppealPossible): void {
       '-' +
       request.numberOfRounds.minus(BigInt.fromI32(1)).toString()
   );
-  round.rulingTime = event.block.timestamp;
 
   let arbitrator = IArbitrator.bind(event.address);
   let appealPeriod = arbitrator.appealPeriod(event.params._disputeID);
   round.appealPeriodStart = appealPeriod.value0;
   round.appealPeriodEnd = appealPeriod.value1;
-  token.appealPeriodStart = appealPeriod.value0;
-  token.appealPeriodEnd = appealPeriod.value1;
+  round.rulingTime = event.block.timestamp;
 
   let currentRuling = arbitrator.currentRuling(request.disputeID);
   round.ruling =
@@ -412,5 +415,11 @@ export function handleAppealPossible(event: AppealPossible): void {
       : currentRuling == BigInt.fromI32(1)
       ? ACCEPT
       : REJECT;
+
+  token.appealPeriodStart = appealPeriod.value0;
+  token.appealPeriodEnd = appealPeriod.value1;
+  token.lastStatusChangeTime = event.block.timestamp;
+
+  token.save();
   round.save();
 }
