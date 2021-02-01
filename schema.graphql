@@ -151,3 +151,13 @@ type Token @entity {
   "The last time the token status changed."
   lastStatusChangeTime: BigInt!
 }
+
+type _Schema_
+  @fulltext(
+    name: "tokenSearch"
+    language: en
+    algorithm: rank
+    include: [
+      { entity: "Token", fields: [{ name: "name" }, { name: "ticker" }] }
+    ]
+  )
