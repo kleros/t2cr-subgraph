@@ -343,7 +343,7 @@ export function handleSubmitEvidence(call: SubmitEvidenceCall): void {
   );
 
   let evidence = new Evidence(
-    request.id + '-' + request.numberOfEvidences.toString()
+    'e-' + request.id + '-' + request.numberOfEvidences.toString()
   );
   evidence.submissionTime = call.block.timestamp;
   evidence.submitter = call.from;
