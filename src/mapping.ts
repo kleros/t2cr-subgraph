@@ -2,12 +2,19 @@
 import { Address, BigInt, Bytes } from '@graphprotocol/graph-ts';
 import {
   ArbitrableTokenList,
-  FundAppealCall,
   MetaEvidence,
   RequestSubmitted,
   Ruling,
+  TokenStatusChange,
+  FundAppealCall,
   SubmitEvidenceCall,
-  TokenStatusChange
+  ChangeWinnerStakeMultiplierCall,
+  ChangeLoserStakeMultiplierCall,
+  ChangeSharedStakeMultiplierCall,
+  ChangeArbitratorCall,
+  ChangeChallengerBaseDepositCall,
+  ChangeRequesterBaseDepositCall,
+  ChangeTimeToChallengeCall
 } from '../generated/ArbitrableTokenList/ArbitrableTokenList';
 import {
   IArbitrator,
@@ -357,6 +364,7 @@ export function handleSubmitEvidence(call: SubmitEvidenceCall): void {
 
 export function handleMetaEvidence(event: MetaEvidence): void {
   let registry = Registry.load(event.address.toHexString());
+  let tcr = ArbitrableTokenList.bind(event.address);
 
   if (!registry) {
     registry = new Registry(event.address.toHexString());
@@ -364,6 +372,16 @@ export function handleMetaEvidence(event: MetaEvidence): void {
     registry.numberOfMetaEvidenceEvents = BigInt.fromI32(0);
     registry.registrationMetaEvidenceURI = '';
     registry.clearingMetaEvidenceURI = '';
+
+    // Initialization
+    registry.challengePeriodDuration = tcr.challengePeriodDuration();
+    registry.winnerStakeMultiplier = tcr.winnerStakeMultiplier();
+    registry.loserStakeMultiplier = tcr.loserStakeMultiplier();
+    registry.sharedStakeMultiplier = tcr.sharedStakeMultiplier();
+    registry.requesterBaseDeposit = tcr.requesterBaseDeposit();
+    registry.challengerBaseDeposit = tcr.challengerBaseDeposit();
+    registry.arbitrator = tcr.arbitrator();
+    registry.arbitratorExtraData = tcr.arbitratorExtraData();
   }
 
   if (
@@ -379,6 +397,7 @@ export function handleMetaEvidence(event: MetaEvidence): void {
   registry.numberOfMetaEvidenceEvents = registry.numberOfMetaEvidenceEvents.plus(
     BigInt.fromI32(1)
   );
+
   registry.save();
 }
 
@@ -422,4 +441,61 @@ export function handleAppealPossible(event: AppealPossible): void {
 
   token.save();
   round.save();
+}
+
+export function handleChangeWinnerStakeMultiplier(
+  call: ChangeWinnerStakeMultiplierCall
+): void {
+  let registry = Registry.load(call.to.toHexString());
+  registry.winnerStakeMultiplier = call.inputs._winnerStakeMultiplier;
+  registry.save();
+}
+
+export function handleChangeLoserStakeMultiplier(
+  call: ChangeLoserStakeMultiplierCall
+): void {
+  let registry = Registry.load(call.to.toHexString());
+  registry.loserStakeMultiplier = call.inputs._loserStakeMultiplier;
+  registry.save();
+}
+
+export function handleChangeSharedStakeMultiplier(
+  call: ChangeSharedStakeMultiplierCall
+): void {
+  let registry = Registry.load(call.to.toHexString());
+  registry.sharedStakeMultiplier = call.inputs._sharedStakeMultiplier;
+  registry.save();
+}
+
+export function handleChangeArbitrator(call: ChangeArbitratorCall): void {
+  let registry = Registry.load(call.to.toHexString());
+
+  registry.arbitrator = call.inputs._arbitrator;
+  registry.arbitratorExtraData = call.inputs._arbitratorExtraData;
+
+  registry.save();
+}
+
+export function handleChangeTimeToChallenge(
+  call: ChangeTimeToChallengeCall
+): void {
+  let registry = Registry.load(call.to.toHexString());
+  registry.challengePeriodDuration = call.inputs._challengePeriodDuration;
+  registry.save();
+}
+
+export function handleChangeRequesterBaseDeposit(
+  call: ChangeRequesterBaseDepositCall
+): void {
+  let registry = Registry.load(call.to.toHexString());
+  registry.requesterBaseDeposit = call.inputs._requesterBaseDeposit;
+  registry.save();
+}
+
+export function handleChangeChallengerBaseDeposit(
+  call: ChangeChallengerBaseDepositCall
+): void {
+  let registry = Registry.load(call.to.toHexString());
+  registry.requesterBaseDeposit = call.inputs._challengerBaseDeposit;
+  registry.save();
 }

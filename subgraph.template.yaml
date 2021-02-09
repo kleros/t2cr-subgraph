@@ -40,6 +40,20 @@ dataSources:
           handler: handleFundAppeal
         - function: submitEvidence(bytes32,string)
           handler: handleSubmitEvidence
+        - function: changeWinnerStakeMultiplier(uint256)
+          handler: handleChangeWinnerStakeMultiplier
+        - function: changeLoserStakeMultiplier(uint256)
+          handler: handleChangeLoserStakeMultiplier
+        - function: changeSharedStakeMultiplier(uint256)
+          handler: handleChangeSharedStakeMultiplier
+        - function: changeArbitrator(address,bytes)
+          handler: handleChangeArbitrator
+        - function: changeChallengerBaseDeposit(uint256)
+          handler: handleChangeChallengerBaseDeposit
+        - function: changeRequesterBaseDeposit(uint256)
+          handler: handleChangeRequesterBaseDeposit
+        - function: changeTimeToChallenge(uint256)
+          handler: handleChangeTimeToChallenge
       file: ./src/mapping.ts
   - kind: ethereum/contract
     name: IArbitrator

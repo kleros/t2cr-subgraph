@@ -42,6 +42,22 @@ type Registry @entity {
   numberOfSubmissions: BigInt!
   "The total number of meta evidence events emitted"
   numberOfMetaEvidenceEvents: BigInt!
+  "The duration of the challenge period"
+  challengePeriodDuration: BigInt!
+  "The fee stake multiplier requested from the winner of the previous round in basis points."
+  winnerStakeMultiplier: BigInt!
+  "The fee stake multiplier requested from the loser of the previous round in basis points."
+  sharedStakeMultiplier: BigInt!
+  "The fee stake multiplier requested from when there isn't a winner or loser (e.g. when its the first round or the arbitrator refused to rule) in basis points."
+  loserStakeMultiplier: BigInt!
+  "The base deposit requested from the challenger."
+  challengerBaseDeposit: BigInt!
+  "The base deposit requested to place a request."
+  requesterBaseDeposit: BigInt!
+  "The arbitrator used for new disputes."
+  arbitrator: Bytes!
+  "The extra data used for new disputes."
+  arbitratorExtraData: Bytes!
 }
 
 type Request @entity {
