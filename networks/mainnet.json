@@ -1,5 +1,7 @@
 {
   "network": "mainnet",
   "t2cr": "0xEbcf3bcA271B26ae4B162Ba560e243055Af0E679",
-  "arbitrator": "0x988b3a538b618c7a603e1c11ab82cd16dbe28069"
+  "t2crStartBlock": "7309834",
+  "arbitrator": "0x988b3a538b618c7a603e1c11ab82cd16dbe28069",
+  "arbitratorStartBlock": "7303699"
 }

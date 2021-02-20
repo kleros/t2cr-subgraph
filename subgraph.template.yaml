@@ -10,7 +10,7 @@ dataSources:
     source:
       address: "{{t2cr}}"
       abi: ArbitrableTokenList
-      startBlock: 7309834
+      startBlock: {{t2crStartBlock}}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.4
@@ -57,11 +57,11 @@ dataSources:
       file: ./src/mapping.ts
   - kind: ethereum/contract
     name: IArbitrator
-    network: mainnet
+    network: "{{network}}"
     source:
       address: "{{arbitrator}}"
       abi: IArbitrator
-      startBlock: 7303699
+      startBlock: {{arbitratorStartBlock}}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.4

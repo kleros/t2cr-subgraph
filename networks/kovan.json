@@ -1,0 +1,7 @@
+{
+  "network": "kovan",
+  "t2cr": "0x25dD2659a1430cDbd678615C7409164ae486c146",
+  "t2crStartBlock": "10452223",
+  "arbitrator": "0x60B2AbfDfaD9c0873242f59f2A8c32A3Cc682f80",
+  "arbitratorStartBlock": "10482136"
+}
