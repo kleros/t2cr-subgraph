@@ -496,6 +496,6 @@ export function handleChangeChallengerBaseDeposit(
   call: ChangeChallengerBaseDepositCall
 ): void {
   let registry = Registry.load(call.to.toHexString());
-  registry.requesterBaseDeposit = call.inputs._challengerBaseDeposit;
+  registry.challengerBaseDeposit = call.inputs._challengerBaseDeposit;
   registry.save();
 }
