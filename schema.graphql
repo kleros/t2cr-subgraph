@@ -110,6 +110,8 @@ type Evidence @entity {
   evidenceURI: String!
   "The request this evidence is related to."
   request: Request!
+  "The hash of the transaction where the evidence was submitted"
+  hash: Bytes!
 }
 
 type Round @entity {

@@ -356,6 +356,7 @@ export function handleSubmitEvidence(call: SubmitEvidenceCall): void {
   evidence.submitter = call.from;
   evidence.evidenceURI = call.inputs._evidence;
   evidence.request = request.id;
+  evidence.hash = call.transaction.hash;
   evidence.save();
 
   request.numberOfEvidences = request.numberOfEvidences.plus(BigInt.fromI32(1));
