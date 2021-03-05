@@ -20,7 +20,14 @@ import {
   IArbitrator,
   AppealPossible
 } from '../generated/ArbitrableTokenList/IArbitrator';
-import { Request, Token, Registry, Round, Evidence } from '../generated/schema';
+import {
+  Request,
+  Token,
+  Registry,
+  Round,
+  Evidence,
+  Contribution
+} from '../generated/schema';
 
 // Result
 const PENDING = 'Pending';
@@ -337,6 +344,24 @@ export function handleFundAppeal(call: FundAppealCall): void {
     latestRound.hasPaidRequester = latestRoundInfo.value2[1];
     latestRound.hasPaidChallenger = latestRoundInfo.value2[2];
     latestRound.save();
+
+    let contributions = tcr.getContributions(
+      call.inputs._tokenID,
+      token.numberOfRequests.minus(BigInt.fromI32(1)),
+      request.numberOfRounds.minus(BigInt.fromI32(1)),
+      call.from
+    );
+
+    let contributionID = latestRound.id + '-' + call.from.toHexString();
+    let contribution = Contribution.load(contributionID);
+    if (contribution == null) {
+      contribution = new Contribution(contributionID);
+      contribution.contributionTime = call.block.timestamp;
+      contribution.round = latestRound.id;
+      contribution.contributor = call.from;
+    }
+    contribution.values = [contributions[1], contributions[2]];
+    contribution.save();
   }
 
   request.save();
