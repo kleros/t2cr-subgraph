@@ -1,6 +1,6 @@
 specVersion: 0.0.2
 description: Requests and submission times for the t2cr.
-repository: https://github.com/kleros/t2cr-data-extract
+repository: https://github.com/kleros/t2cr-subgraph
 schema:
   file: ./schema.graphql
 dataSources:
@@ -17,10 +17,10 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - Registry
+        - Token
         - Request
         - Evidence
         - Round
-        - Token
       abis:
         - name: ArbitrableTokenList
           file: ./abis/t2cr.json

@@ -97,6 +97,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.arbitrator = tcr.arbitrator();
   request.arbitratorExtraData = tcr.arbitratorExtraData();
   request.numberOfEvidences = BigInt.fromI32(0);
+  request.blockNumber = event.block.number;
 
   request.metaEvidenceURI =
     request.type == REGISTRATION_REQUESTED
@@ -167,11 +168,11 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
 
   // Ruling enforcement is handled in handleRuling, so we'll skip it here.
   if (request.resolutionTime.gt(BigInt.fromI32(0))) return;
+
   //Appeals are handled in handleFundAppeal. Skip.
   if (event.params._appealed) return;
 
   // Handle dispute creation.
-
   let requestInfo = tcr.getRequestInfo(
     event.params._tokenID,
     token.numberOfRequests.minus(BigInt.fromI32(1))
@@ -382,6 +383,7 @@ export function handleSubmitEvidence(call: SubmitEvidenceCall): void {
   evidence.evidenceURI = call.inputs._evidence;
   evidence.request = request.id;
   evidence.hash = call.transaction.hash;
+  evidence.blockNumber = call.block.number;
   evidence.save();
 
   request.numberOfEvidences = request.numberOfEvidences.plus(BigInt.fromI32(1));

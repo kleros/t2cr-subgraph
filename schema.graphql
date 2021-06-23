@@ -97,6 +97,8 @@ type Request @entity {
   evidences: [Evidence!]! @derivedFrom(field: "request")
   "The number of evidence submitted"
   numberOfEvidences: BigInt!
+  "The block this request was created."
+  blockNumber: BigInt!
 }
 
 type Evidence @entity {
@@ -112,6 +114,8 @@ type Evidence @entity {
   request: Request!
   "The hash of the transaction where the evidence was submitted"
   hash: Bytes!
+  "The block this evidence was mined."
+  blockNumber: BigInt!
 }
 
 type Contribution @entity {
