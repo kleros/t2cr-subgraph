@@ -14,13 +14,21 @@ import {
   ChangeArbitratorCall,
   ChangeChallengerBaseDepositCall,
   ChangeRequesterBaseDepositCall,
-  ChangeTimeToChallengeCall
+  ChangeTimeToChallengeCall,
+  ChallengeRequestCall
 } from '../generated/ArbitrableTokenList/ArbitrableTokenList';
 import {
   IArbitrator,
   AppealPossible
 } from '../generated/ArbitrableTokenList/IArbitrator';
-import { Request, Token, Registry, Round, Evidence } from '../generated/schema';
+import {
+  Request,
+  Token,
+  Registry,
+  Round,
+  Evidence,
+  Contribution
+} from '../generated/schema';
 
 // Result
 const PENDING = 'Pending';
@@ -90,6 +98,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.arbitrator = tcr.arbitrator();
   request.arbitratorExtraData = tcr.arbitratorExtraData();
   request.numberOfEvidences = BigInt.fromI32(0);
+  request.blockNumber = event.block.number;
 
   request.metaEvidenceURI =
     request.type == REGISTRATION_REQUESTED
@@ -143,6 +152,7 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
 
     // Request executed.
     request.resolutionTime = event.block.timestamp;
+    request.resolutionTx = event.transaction.hash;
     request.result = ACCEPTED;
     if (request.type == REGISTRATION_REQUESTED) token.status = REGISTERED;
     else token.status = ABSENT;
@@ -160,11 +170,11 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
 
   // Ruling enforcement is handled in handleRuling, so we'll skip it here.
   if (request.resolutionTime.gt(BigInt.fromI32(0))) return;
+
   //Appeals are handled in handleFundAppeal. Skip.
   if (event.params._appealed) return;
 
   // Handle dispute creation.
-
   let requestInfo = tcr.getRequestInfo(
     event.params._tokenID,
     token.numberOfRequests.minus(BigInt.fromI32(1))
@@ -249,6 +259,7 @@ export function handleRuling(event: Ruling): void {
   }
 
   request.resolutionTime = event.block.timestamp;
+  request.resolutionTx = event.transaction.hash;
   token.disputed = false;
   token.appealPeriodStart = BigInt.fromI32(0);
   token.appealPeriodEnd = BigInt.fromI32(0);
@@ -256,6 +267,34 @@ export function handleRuling(event: Ruling): void {
 
   request.save();
   token.save();
+}
+
+// State changes caused by challenges are handled in the
+// handleTokenStatusChange handler. This is just for adding
+// evidence, if the challenger provided it.
+// Note: The reason for using two handlers is because call handler and
+// the event handlers provide different parameter sets we can use.
+export function handleChallengeRequest(call: ChallengeRequestCall): void {
+  if (call.inputs._evidence.length == 0) return;
+
+  let token = Token.load(call.inputs._tokenID.toHexString());
+  let request = Request.load(
+    token.id + '-' + token.numberOfRequests.minus(BigInt.fromI32(1)).toString()
+  );
+
+  let evidence = new Evidence(
+    'e-' + request.id + '-' + request.numberOfEvidences.toString()
+  );
+  evidence.submissionTime = call.block.timestamp;
+  evidence.submitter = call.from;
+  evidence.evidenceURI = call.inputs._evidence;
+  evidence.request = request.id;
+  evidence.hash = call.transaction.hash;
+  evidence.blockNumber = call.block.number;
+  evidence.save();
+
+  request.numberOfEvidences = request.numberOfEvidences.plus(BigInt.fromI32(1));
+  request.save();
 }
 
 export function handleFundAppeal(call: FundAppealCall): void {
@@ -337,6 +376,24 @@ export function handleFundAppeal(call: FundAppealCall): void {
     latestRound.hasPaidRequester = latestRoundInfo.value2[1];
     latestRound.hasPaidChallenger = latestRoundInfo.value2[2];
     latestRound.save();
+
+    let contributions = tcr.getContributions(
+      call.inputs._tokenID,
+      token.numberOfRequests.minus(BigInt.fromI32(1)),
+      request.numberOfRounds.minus(BigInt.fromI32(1)),
+      call.from
+    );
+
+    let contributionID = latestRound.id + '-' + call.from.toHexString();
+    let contribution = Contribution.load(contributionID);
+    if (contribution == null) {
+      contribution = new Contribution(contributionID);
+      contribution.contributionTime = call.block.timestamp;
+      contribution.round = latestRound.id;
+      contribution.contributor = call.from;
+    }
+    contribution.values = [contributions[1], contributions[2]];
+    contribution.save();
   }
 
   request.save();
@@ -357,6 +414,7 @@ export function handleSubmitEvidence(call: SubmitEvidenceCall): void {
   evidence.evidenceURI = call.inputs._evidence;
   evidence.request = request.id;
   evidence.hash = call.transaction.hash;
+  evidence.blockNumber = call.block.number;
   evidence.save();
 
   request.numberOfEvidences = request.numberOfEvidences.plus(BigInt.fromI32(1));

@@ -85,7 +85,7 @@ type Request @entity {
   disputeID: BigInt!
   "The time the dispute was created."
   disputeCreationTime: BigInt!
-  "The address of the party that challenged the request"
+  "The address of the party that challenged the request."
   challenger: Bytes!
   "Tracks each round of a dispute in the form rounds[roundID]."
   rounds: [Round!]! @derivedFrom(field: "request")
@@ -95,8 +95,12 @@ type Request @entity {
   token: Token!
   "The evidences submitted for this request."
   evidences: [Evidence!]! @derivedFrom(field: "request")
-  "The number of evidence submitted"
+  "The number of evidence submitted."
   numberOfEvidences: BigInt!
+  "The block this request was created."
+  blockNumber: BigInt!
+  "The transaction this request was resolved."
+  resolutionTx: Bytes
 }
 
 type Evidence @entity {
@@ -112,6 +116,21 @@ type Evidence @entity {
   request: Request!
   "The hash of the transaction where the evidence was submitted"
   hash: Bytes!
+  "The block this evidence was mined."
+  blockNumber: BigInt!
+}
+
+type Contribution @entity {
+  "The contribution's ID, keccak256(roundID, contributor)."
+  id: ID!
+  "The time the contributor made the last contribution to this round."
+  contributionTime: BigInt!
+  "The round the contribution is for."
+  round: Round!
+  "The address of the contributor."
+  contributor: Bytes!
+  "The contributions for each side."
+  values: [BigInt!]!
 }
 
 type Round @entity {
@@ -139,6 +158,8 @@ type Round @entity {
   appealPeriodStart: BigInt!
   "The end of the appeal period, if any."
   appealPeriodEnd: BigInt!
+  "The contributions for the round."
+  contributions: [Contribution!]! @derivedFrom(field: "round")
 }
 
 type Token @entity {
