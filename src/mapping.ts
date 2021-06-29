@@ -14,7 +14,8 @@ import {
   ChangeArbitratorCall,
   ChangeChallengerBaseDepositCall,
   ChangeRequesterBaseDepositCall,
-  ChangeTimeToChallengeCall
+  ChangeTimeToChallengeCall,
+  ChallengeRequestCall
 } from '../generated/ArbitrableTokenList/ArbitrableTokenList';
 import {
   IArbitrator,
@@ -266,6 +267,34 @@ export function handleRuling(event: Ruling): void {
 
   request.save();
   token.save();
+}
+
+// State changes caused by challenges are handled in the
+// handleTokenStatusChange handler. This is just for adding
+// evidence, if the challenger provided it.
+// Note: The reason for using two handlers is because call handler and
+// the event handlers provide different parameter sets we can use.
+export function handleChallengeRequest(call: ChallengeRequestCall): void {
+  if (call.inputs._evidence.length == 0) return;
+
+  let token = Token.load(call.inputs._tokenID.toHexString());
+  let request = Request.load(
+    token.id + '-' + token.numberOfRequests.minus(BigInt.fromI32(1)).toString()
+  );
+
+  let evidence = new Evidence(
+    'e-' + request.id + '-' + request.numberOfEvidences.toString()
+  );
+  evidence.submissionTime = call.block.timestamp;
+  evidence.submitter = call.from;
+  evidence.evidenceURI = call.inputs._evidence;
+  evidence.request = request.id;
+  evidence.hash = call.transaction.hash;
+  evidence.blockNumber = call.block.number;
+  evidence.save();
+
+  request.numberOfEvidences = request.numberOfEvidences.plus(BigInt.fromI32(1));
+  request.save();
 }
 
 export function handleFundAppeal(call: FundAppealCall): void {

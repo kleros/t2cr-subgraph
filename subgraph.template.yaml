@@ -54,6 +54,8 @@ dataSources:
           handler: handleChangeRequesterBaseDeposit
         - function: changeTimeToChallenge(uint256)
           handler: handleChangeTimeToChallenge
+        - function: challengeRequest(bytes32,string)
+          handler: handleChallengeRequest
       file: ./src/mapping.ts
   - kind: ethereum/contract
     name: IArbitrator
