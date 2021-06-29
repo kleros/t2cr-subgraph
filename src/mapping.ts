@@ -151,6 +151,7 @@ export function handleTokenStatusChange(event: TokenStatusChange): void {
 
     // Request executed.
     request.resolutionTime = event.block.timestamp;
+    request.resolutionTx = event.transaction.hash;
     request.result = ACCEPTED;
     if (request.type == REGISTRATION_REQUESTED) token.status = REGISTERED;
     else token.status = ABSENT;
@@ -257,6 +258,7 @@ export function handleRuling(event: Ruling): void {
   }
 
   request.resolutionTime = event.block.timestamp;
+  request.resolutionTx = event.transaction.hash;
   token.disputed = false;
   token.appealPeriodStart = BigInt.fromI32(0);
   token.appealPeriodEnd = BigInt.fromI32(0);
